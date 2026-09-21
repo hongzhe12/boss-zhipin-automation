@@ -1,0 +1,6 @@
+interface:
+  display_name: "Boss直聘自动化"
+  short_description: "Boss直聘 Android 自动化、控件定位与批量打招呼默认脚本"
+  default_prompt: "使用 $boss-zhipin-automation 先检查 ADB 手机连接和 Boss直聘职位详情页状态；检查通过后默认运行 scripts/run_auto_greet.cmd 自动打招呼 10 个职位，连接异常时停止并报告。"
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,200 @@
+---
+name: boss-zhipin-automation
+description: "Boss直聘 Android 自动化开发、控件定位、页面操作与故障排查；提供已验证控件、操作约束和未知页面处理规范。"
+metadata:
+  short-description: "Boss直聘 Android 自动化开发上下文"
+---
+
+# Boss直聘 Android 自动化
+
+你是处理 Boss直聘 Android 自动化需求的工程 Agent。本 Skill 提供项目上下文和行为约束，不是面向开发者的 Auto.js 使用教程。
+
+## 项目
+
+- 目标应用：Boss直聘
+- Package：`com.hpbr.bosszhipin`
+- 工作范围：Android 自动化代码、控件定位、页面操作、脚本开发和问题排查
+- 对应现有项目：`C:\Users\Administrator\PycharmProjects\ResumeAce`
+- 可用 Python 环境：
+  `D:\Program Files (x86)\简历助手\python-embed\python.exe`
+
+处理需求时，先理解目标页面和操作流程，再检查当前项目中是否已有可复用的实现、控件和操作。不要脱离现有代码重新设计同类逻辑。
+
+## 事实分级
+
+必须区分以下三类信息：
+
+- **已验证事实**：本 Skill 明确列出的控件和操作，以及当前项目和实际运行结果已经证实的信息。
+- **代码推断**：根据现有代码或页面层级推断出的行为，仍需结合当前环境确认。
+- **未验证假设**：尚未通过 UI 树、Accessibility 信息、运行结果或用户确认的信息。
+
+不得把代码推断或未验证假设表述为确定事实。未验证信息不足以支撑实现时，应先获取当前页面证据或向用户说明缺失信息。
+
+## 已验证的 UI 控件
+
+以下控件已在实际自动化项目中验证可用。
+
+### 职位信息
+
+| 控件 ID | 用途 |
+| --- | --- |
+| `com.hpbr.bosszhipin:id/tv_job_name` | 职位名称 |
+| `com.hpbr.bosszhipin:id/tv_description` | 职位描述 |
+| `com.hpbr.bosszhipin:id/tv_job_salary` | 职位薪资 |
+| `com.hpbr.bosszhipin:id/tv_required_location` | 工作地点 |
+| `com.hpbr.bosszhipin:id/tv_boss_name` | 招聘者姓名 |
+| `com.hpbr.bosszhipin:id/btn_chat` | 打招呼 |
+
+### 个人投递数据
+
+| 控件 ID | 用途 |
+| --- | --- |
+| `com.hpbr.bosszhipin:id/tv_geek_contacts_number` | 沟通数量 |
+| `com.hpbr.bosszhipin:id/tv_geek_post_resume_number` | 投递数量 |
+| `com.hpbr.bosszhipin:id/tv_interview_count` | 面试数量 |
+
+## 已验证的操作
+
+项目中已经实际验证过：
+
+- 获取职位名称
+- 获取职位描述
+- 获取职位薪资
+- 获取工作地点
+- 获取招聘者姓名
+- 点击“打招呼”
+- 返回上一页
+- 向左滑动切换职位
+- 获取个人投递统计数据
+
+职位切换曾使用职位名称控件作为操作目标，而不是依赖固定屏幕坐标。
+
+## 默认自动执行脚本
+
+当用户要求批量打招呼、自动沟通、运行完整职位处理流程，或要求执行本 Skill 的自动脚本时，
+默认使用 [scripts/auto_greet.py](scripts/auto_greet.py)，不要自动改成只读预览、dry-run
+或仅输出代码建议。
+
+脚本在读取 UI 和执行点击前，必须先检查手机 ADB 连接状态：
+
+1. 从 `ADB` 环境变量、`PATH` 和常见 Android SDK 目录定位 `adb`。
+2. 执行 `adb devices -l`，只接受状态为 `device` 的已授权设备。
+3. 没有设备、设备为 `offline`/`unauthorized`，或存在多个可用设备但未指定
+   `--serial` 时，打印错误并以非零状态退出，不执行 UI 读取、点击或滑动。
+4. 连接检查通过后，读取当前职位详情页的职位名称、描述、薪资、地点和招聘者。
+5. 定位已验证控件 `com.hpbr.bosszhipin:id/btn_chat`；页面缺少
+   `tv_job_name` 或 `btn_chat` 时，说明当前不是职位详情页并停止。
+6. 默认执行真实点击，然后返回上一页，并使用职位名称控件向左滑动切换职位。
+7. 默认处理 `10` 个职位；用户可以明确指定其他数量。
+8. 找不到按钮或发生异常时打印原因并切换到下一职位。
+
+运行方式：
+
+```powershell
+cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd"
+```
+
+常用参数：
+
+```powershell
+cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd --check"
+cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd --count 10"
+cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd --serial 设备序列号"
+cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd --dry-run"
+```
+
+- `--check`：只检查 ADB 连接，不读取页面、不点击。
+- `--count N`：指定处理数量，默认 `10`。
+- `--serial SERIAL`：指定 ADB 设备；多个设备连接时必须使用。
+- `--dry-run`：读取并切换职位，但不点击“打招呼”；仅用于用户明确要求预览时。
+
+入口包装脚本优先使用以下 Python 环境，并设置 UTF-8 输出：
+
+```text
+D:\Program Files (x86)\简历助手\python-embed\python.exe
+```
+
+自动脚本仅依赖 Python 标准库、`adb` 和目标手机上的 `uiautomator`，不再依赖
+AirTest 或 Poco。Codex 不应改用 PATH 中不确定存在的 `python` 命令，也不应把脚本
+改成仅生成代码或等待二次确认。
+
+## 需求对齐后的默认调用契约
+
+当用户调用本 Skill 并表达“自动打招呼”“批量打招呼”或“运行自动脚本”时，默认执行：
+
+1. 先运行 `--check` 或在正式脚本运行中完成同等 ADB 连接检查；连接检查失败时停止。
+2. 使用 `android-use` MCP 只读确认当前页面存在职位详情控件
+   `tv_job_name` 和 `btn_chat`。未使用该 MCP 时，脚本会在点击前再次检查页面。
+3. 当前页面是职位详情页且 ADB 连接检查通过时，运行
+   `scripts/run_auto_greet.cmd`。
+4. 默认处理 `10` 个职位；用户指定数量时使用 `--count`。
+5. 将脚本输出中的职位名称、薪资、地点、招聘者、点击结果、成功打招呼数量和
+   完成数量返回给用户。
+6. 当前页面不是职位详情页时，不执行滑动或点击，明确报告当前页面并停止。
+
+完整自动化的起点是“Boss直聘职位详情页”。当前 Skill 没有已验证的职位列表卡片控件，
+因此不能可靠地从未知列表页自动打开第一个职位。
+
+## 控件定位原则
+
+开发或修改自动化代码时：
+
+1. 优先使用本 Skill 中已经验证的控件 ID。
+2. 没有已知 ID 时，再根据当前页面的 UI 信息寻找 `text`、`desc`、`className` 等稳定属性。
+3. 优先利用控件之间的层级关系定位目标。
+4. 坐标操作只能作为最后手段。
+5. 不要因为控件暂时无法找到，就直接改成固定坐标。
+6. 不要凭空猜测新的控件 ID。
+
+## 未知控件处理
+
+如果需求需要操作本 Skill 中没有记录的控件：
+
+- 不要编造控件 ID。
+- 不要假设页面结构。
+- 不要直接使用坐标作为默认解决方案。
+- 优先要求用户提供当前页面的控件树、Accessibility 信息、Poco UI 树或页面截图。
+- 依据用户提供的新信息确定可靠、可维护的控件定位方式。
+
+如果缺少必要页面信息，应明确说明目前无法可靠定位，并请求最小的必要证据；不要为了继续输出代码而静默降级到坐标操作。
+
+## 已知控件与实际页面不一致时
+
+如果代码使用了已知 ID，但当前环境无法定位，依次检查：
+
+- 当前是否处于正确页面
+- 页面是否尚未加载完成
+- 控件是否已经发生变化
+- 当前自动化框架是否能够读取该控件
+- Accessibility/UI 控件树是否与历史环境不同
+
+不要因为一次定位失败就直接认定 ID 已失效，也不要立即改成固定坐标。先收集当前页面的 UI 证据，再决定是调整等待逻辑、定位范围或定位属性，还是更新已知事实。
+
+## 代码修改原则
+
+修改现有自动化代码时：
+
+- 优先做最小修改。
+- 优先复用已有代码和已验证控件。
+- 不要进行与需求无关的重构。
+- 不要引入复杂架构。
+- 不要为了一个简单功能增加大量抽象。
+- 新功能应尽可能保持与现有项目风格一致。
+- 如果一个简单函数即可完成，不要设计复杂的类或框架。
+
+实现前检查当前代码的等待、查找、滑动和页面切换方式，并沿用已有模式；只有在明确解决当前问题时才引入新的辅助逻辑。
+
+## Agent 工作方式
+
+当用户提出新的 Boss直聘自动化需求时，按以下顺序工作：
+
+1. 理解需求和目标页面。
+2. 检查当前项目代码、已有操作和本 Skill 中可复用的已验证信息。
+3. 尽可能基于已有信息实现。
+4. 对未知控件或页面结构，先说明缺少什么证据，并请求必要的 UI 信息。
+5. 给出简单、直接、可运行的实现。
+6. 避免不必要的坐标依赖和过度设计。
+7. 对批量打招呼需求，默认运行 `scripts/run_auto_greet.cmd`；除非用户明确要求只分析、
+   只读取或只修改代码，否则不要主动停止在只读阶段。
+
+在回复和代码中清楚表达事实来源。若某项行为尚未验证，要明确标注为推断或待确认，不能伪装成已知事实。
