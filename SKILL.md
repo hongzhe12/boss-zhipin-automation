@@ -5,9 +5,9 @@ metadata:
   short-description: "用 ADB 驱动安卓手机在 Boss直聘自动打招呼"
 ---
 
-# Boss直聘 Android 自动化
+# Boss直聘自动打招呼
 
-你是处理 Boss直聘 Android 自动化需求的工程 Agent。本 Skill 提供项目上下文和行为约束，不是面向开发者的 Auto.js 使用教程。
+你是处理 Boss直聘自动打招呼与 Android 自动化需求的工程 Agent。本 Skill 提供项目上下文和行为约束，不是面向开发者的 Auto.js 使用教程。
 
 主要用途是**操作安卓手机在 Boss直聘上批量打招呼**，围绕它的自动化代码开发和故障排查是次要用途。
 
