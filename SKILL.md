@@ -1,22 +1,25 @@
 ---
 name: boss-zhipin-automation
-description: "Boss直聘 Android 自动化开发、控件定位、页面操作与故障排查；提供已验证控件、操作约束和未知页面处理规范。"
+description: "通过 ADB 驱动安卓手机在 Boss直聘 App 上自动打招呼：读取职位详情页、批量点击“打招呼”并切换职位；也用于相关 Android 自动化代码开发、控件定位与故障排查。"
 metadata:
-  short-description: "Boss直聘 Android 自动化开发上下文"
+  short-description: "用 ADB 驱动安卓手机在 Boss直聘自动打招呼"
 ---
 
 # Boss直聘 Android 自动化
 
 你是处理 Boss直聘 Android 自动化需求的工程 Agent。本 Skill 提供项目上下文和行为约束，不是面向开发者的 Auto.js 使用教程。
 
+主要用途是**操作安卓手机在 Boss直聘上批量打招呼**，围绕它的自动化代码开发和故障排查是次要用途。
+
 ## 项目
 
 - 目标应用：Boss直聘
 - Package：`com.hpbr.bosszhipin`
 - 工作范围：Android 自动化代码、控件定位、页面操作、脚本开发和问题排查
-- 对应现有项目：`C:\Users\Administrator\PycharmProjects\ResumeAce`
-- 可用 Python 环境：
-  `D:\Program Files (x86)\简历助手\python-embed\python.exe`
+- 脚本位置：本 Skill 目录下的 `scripts/`，与 `SKILL.md` 同级
+- Python 环境：脚本只依赖标准库，Python 3 即可；本机若存在 `python-embed` 环境则优先使用
+
+引用脚本时使用相对路径（如 `scripts/auto_greet.py`），不要写死某台机器的绝对路径。
 
 处理需求时，先理解目标页面和操作流程，再检查当前项目中是否已有可复用的实现、控件和操作。不要脱离现有代码重新设计同类逻辑。
 
@@ -88,19 +91,19 @@ metadata:
 7. 默认处理 `10` 个职位；用户可以明确指定其他数量。
 8. 找不到按钮或发生异常时打印原因并切换到下一职位。
 
-运行方式：
+运行方式（在 Skill 目录下执行；路径按实际安装位置，不要写死绝对路径）：
 
 ```powershell
-cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd"
+scripts\run_auto_greet.cmd
 ```
 
 常用参数：
 
 ```powershell
-cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd --check"
-cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd --count 10"
-cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd --serial 设备序列号"
-cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_auto_greet.cmd --dry-run"
+scripts\run_auto_greet.cmd --check
+scripts\run_auto_greet.cmd --count 10
+scripts\run_auto_greet.cmd --serial 设备序列号
+scripts\run_auto_greet.cmd --dry-run
 ```
 
 - `--check`：只检查 ADB 连接，不读取页面、不点击。
@@ -108,14 +111,14 @@ cmd /c "C:\Users\Administrator\.codex\skills\boss-zhipin-automation\scripts\run_
 - `--serial SERIAL`：指定 ADB 设备；多个设备连接时必须使用。
 - `--dry-run`：读取并切换职位，但不点击“打招呼”；仅用于用户明确要求预览时。
 
-入口包装脚本优先使用以下 Python 环境，并设置 UTF-8 输出：
+也可以直接运行等价的 `python scripts/auto_greet.py`（参数相同）。
 
-```text
-D:\Program Files (x86)\简历助手\python-embed\python.exe
-```
+入口包装脚本会搜索 `D:\Program Files (x86)\*\python-embed\python.exe` 并设置 UTF-8 输出；
+该环境不存在时会报 “Python environment was not found.”，此时改用上面的
+`python scripts/auto_greet.py` 直接运行，不要因为解释器路径不同就放弃执行或只输出代码。
 
-自动脚本仅依赖 Python 标准库、`adb` 和目标手机上的 `uiautomator`，不再依赖
-AirTest 或 Poco。Codex 不应改用 PATH 中不确定存在的 `python` 命令，也不应把脚本
+自动脚本仅依赖 Python 标准库、`adb` 和目标手机上的 `uiautomator`，不依赖
+AirTest 或 Poco。不要改用 PATH 中不确定存在的解释器，也不应把脚本
 改成仅生成代码或等待二次确认。
 
 ## 需求对齐后的默认调用契约
@@ -123,8 +126,9 @@ AirTest 或 Poco。Codex 不应改用 PATH 中不确定存在的 `python` 命令
 当用户调用本 Skill 并表达“自动打招呼”“批量打招呼”或“运行自动脚本”时，默认执行：
 
 1. 先运行 `--check` 或在正式脚本运行中完成同等 ADB 连接检查；连接检查失败时停止。
-2. 使用 `android-use` MCP 只读确认当前页面存在职位详情控件
-   `tv_job_name` 和 `btn_chat`。未使用该 MCP 时，脚本会在点击前再次检查页面。
+2. 若当前环境提供 `android-use`（或同类 ADB / UI 树）MCP，可用它只读确认页面存在
+   职位详情控件 `tv_job_name` 和 `btn_chat`；MCP 不可用时跳过此步，脚本会在点击前
+   自行检查页面，并在不是职位详情页时停止。
 3. 当前页面是职位详情页且 ADB 连接检查通过时，运行
    `scripts/run_auto_greet.cmd`。
 4. 默认处理 `10` 个职位；用户指定数量时使用 `--count`。
