@@ -1,43 +1,102 @@
-# Boss直聘自动化 Skill
+# Boss直聘自动打招呼 Skill
 
-这是一个面向 Codex 的 Skill，用于处理 Boss直聘 Android 自动化项目中的代码开发、控件定位、页面操作和问题排查。
+一个让 Agent 用 ADB 驱动**安卓手机**、在 Boss直聘 App 上批量点“打招呼”的 Skill。
 
-它的重点不是介绍 Auto.js 或某个自动化框架的 API，而是为 Agent 提供项目上下文和行为约束，使 Agent 能够区分已经验证的事实、根据代码作出的推断，以及尚未验证的假设。
+你只要把手机连上、停在某个职位的详情页，Agent 就会自动读取职位信息、点“打招呼”、返回并左滑切到下一个职位，默认连续处理 10 个。
 
-## 主要能力
+- 目标应用：Boss直聘（`com.hpbr.bosszhipin`）
+- 运行方式：手机 USB 连接 + `adb` + 手机端 `uiautomator`，Python 标准库，无需 Appium / AirTest
+- 默认脚本：`scripts/auto_greet.py`（由 `scripts/run_auto_greet.cmd` 包装调用）
 
-- 记录 Boss直聘 Android 自动化项目中已经验证的 UI 控件和操作。
-- 约束 Agent 优先复用已有代码和已验证控件。
-- 规范未知控件、控件定位失败和 UI 结构变化时的处理方式。
-- 避免 Agent 编造控件 ID、默认依赖固定坐标或进行不必要的重构。
-- 要求 Agent 在缺少页面证据时说明信息缺口，并请求必要的 UI 树或截图。
+## 它能做什么
 
-目标应用信息：
+对当前职位详情页，逐个执行：
 
-- 应用名称：Boss直聘
-- Package：`com.hpbr.bosszhipin`
+1. 检查 ADB 连接（只接受状态为 `device` 的已授权设备）。
+2. 读取职位名称、职位描述、薪资、工作地点、招聘者姓名。
+3. 点击“打招呼”。
+4. 返回上一页，再左滑切换到下一个职位。
+5. 汇总每个职位的处理结果和成功打招呼数量。
 
-已验证控件和操作的完整说明见 [SKILL.md](SKILL.md)。
+不会做的事：不投递简历、不发送自定义聊天内容、不在无法识别的页面上盲点。
+
+## 前置条件
+
+- 安卓手机开启**USB 调试**，并在手机上授权本机电脑（`adb devices` 显示 `device`）。
+- 本机有 `adb`，且能从 `PATH`、`ADB` 环境变量或常见 Android SDK 目录中找到。
+- 有 Python 3（脚本只依赖标准库）。
+- **把手机停在 Boss直聘的职位详情页**再启动脚本——本项目没有已验证的职位列表卡片控件，无法从列表页自动进入第一个职位。
+
+`scripts/run_auto_greet.cmd` 会自动在 `D:\Program Files (x86)\*\python-embed\python.exe` 里找解释器；如果你的 Python 装在别处，直接改用 `python scripts/auto_greet.py` 即可。
+
+## 快速开始
+
+```powershell
+# 1. 先确认手机连接正常（不读页面、不点击）
+python scripts/auto_greet.py --check
+
+# 2. 在手机上打开某个职位的详情页，然后开始自动打招呼
+python scripts/auto_greet.py
+```
+
+或用包装脚本（自带 UTF-8 输出设置）：
+
+```powershell
+scripts\run_auto_greet.cmd --count 10
+```
+
+## 常用参数
+
+| 参数 | 说明 |
+| --- | --- |
+| `--check` | 只检查 ADB 连接，不读取页面、不点击 |
+| `--count N` | 处理多少个职位，默认 `10` |
+| `--serial SERIAL` | 指定设备序列号；同时连接多台手机时必须指定 |
+| `--dry-run` | 读取并切换职位，但不点“打招呼”（仅预览用） |
+
+连接检查不通过（无设备 / `offline` / `unauthorized` / 多设备未指定 `--serial`）时，脚本会直接报错退出，不会做任何点击或滑动。
+
+## 已验证的控件
+
+以下控件 ID 已在真实设备上验证可用，脚本依赖它们定位页面。
+
+职位详情页：
+
+| 控件 ID | 用途 |
+| --- | --- |
+| `com.hpbr.bosszhipin:id/tv_job_name` | 职位名称 |
+| `com.hpbr.bosszhipin:id/tv_description` | 职位描述 |
+| `com.hpbr.bosszhipin:id/tv_job_salary` | 职位薪资 |
+| `com.hpbr.bosszhipin:id/tv_required_location` | 工作地点 |
+| `com.hpbr.bosszhipin:id/tv_boss_name` | 招聘者姓名 |
+| `com.hpbr.bosszhipin:id/btn_chat` | 打招呼 |
+
+个人投递数据：
+
+| 控件 ID | 用途 |
+| --- | --- |
+| `com.hpbr.bosszhipin:id/tv_geek_contacts_number` | 沟通数量 |
+| `com.hpbr.bosszhipin:id/tv_geek_post_resume_number` | 投递数量 |
+| `com.hpbr.bosszhipin:id/tv_interview_count` | 面试数量 |
+
+页面缺少 `tv_job_name` 或 `btn_chat` 时，脚本会判定“当前不是职位详情页”并停止，而不是猜测页面结构。
 
 ## 目录结构
 
 ```text
 boss-zhipin-automation/
-|-- SKILL.md
-|-- README.md
-`-- agents/
-    `-- openai.yaml
+|-- SKILL.md              # Agent 加载的上下文、事实与操作规范
+|-- README.md             # 本文件
+|-- agents/
+|   `-- openai.yaml       # Skill 的显示信息和默认调用提示词
+`-- scripts/
+    |-- auto_greet.py       # 自动打招呼主脚本
+    `-- run_auto_greet.cmd  # Windows 包装脚本
 ```
 
-- `SKILL.md`：Agent 实际加载的上下文、事实和操作规范。
-- `agents/openai.yaml`：Skill 在界面中的显示信息和默认调用提示词。
-- `README.md`：项目面向使用者的说明。
+## 安装为本地 Skill
 
-## 使用方式
-
-Codex 会从仓库、用户、管理员和系统位置加载本地 Skill。本项目的本地安装目标是 `.agents/skills` 下的 Skill 目录。
-
-安装后的目录必须直接包含 `SKILL.md`、`README.md` 和可选的 `agents/`：
+Codex 从 `.agents/skills` 加载本地 Skill，安装后的目录必须直接包含 `SKILL.md`：
 
 ```text
 .agents/
@@ -45,123 +104,38 @@ Codex 会从仓库、用户、管理员和系统位置加载本地 Skill。本�
     `-- boss-zhipin-automation/
         |-- SKILL.md
         |-- README.md
-        `-- agents/
-            `-- openai.yaml
+        |-- agents/
+        `-- scripts/
 ```
 
-### 安装为用户级 Skill
-
-用户级 Skill 对所有仓库可用。
-
-Windows 默认位置：
-
-```text
-%USERPROFILE%\.agents\skills\boss-zhipin-automation\
-```
-
-在 PowerShell 中，进入本项目根目录后执行：
+用户级（对所有仓库可用）——Windows：
 
 ```powershell
 $target = Join-Path $HOME ".agents\skills\boss-zhipin-automation"
 New-Item -ItemType Directory -Force -Path $target | Out-Null
-Copy-Item -Recurse -Force .\SKILL.md, .\README.md, .\agents $target
+Copy-Item -Recurse -Force .\SKILL.md, .\README.md, .\agents, .\scripts $target
 ```
 
-macOS 和 Linux 默认位置：
-
-```text
-~/.agents/skills/boss-zhipin-automation/
-```
-
-在终端中，进入本项目根目录后执行：
+用户级——macOS / Linux：
 
 ```bash
 target="$HOME/.agents/skills/boss-zhipin-automation"
 mkdir -p "$target"
-cp -R SKILL.md README.md agents "$target/"
+cp -R SKILL.md README.md agents scripts "$target/"
 ```
 
-### 安装为仓库级 Skill
+仓库级（只对当前仓库可用）把同样的文件复制到 `<repo>/.agents/skills/boss-zhipin-automation/`。开发期间也可以把安装位置直接符号链接到本仓库，改完 `SKILL.md` 无需重复安装。
 
-仓库级 Skill 只对对应仓库可用，适合团队一起维护。Codex 会从当前工作目录逐级向上扫描 `.agents/skills`，直到仓库根目录。
+安装后可用 `/skills` 查看、用 `$boss-zhipin-automation` 显式调用，或由 Codex 根据 `description` 隐式调用；修改后若未生效，重启 Codex。
 
-目标位置：
+## 事实分级与使用边界
 
-```text
-<repo>/.agents/skills/boss-zhipin-automation/
-```
+`SKILL.md` 中明确列出的控件和操作才算**已验证事实**；其余页面结构、控件 ID 和交互行为仍需用当前设备上的 UI 树、运行结果或截图确认。
 
-Windows PowerShell 示例：
+因此当需求涉及未知控件时，Agent 应：
 
-```powershell
-$source = "C:\path\to\boss-zhipin-automation"
-$target = Join-Path (Get-Location) ".agents\skills\boss-zhipin-automation"
-New-Item -ItemType Directory -Force -Path $target | Out-Null
-Copy-Item -Recurse -Force "$source\SKILL.md", "$source\README.md", "$source\agents" $target
-```
+- 不编造控件 ID、不假设页面结构、不把固定坐标当作默认方案；
+- 先向你索要当前页面的控件树 / Accessibility 信息 / 页面截图；
+- 在信息不足时明确说明“目前无法可靠定位”，而不是静默降级成坐标点击。
 
-macOS 和 Linux 示例：
-
-```bash
-source_dir="/path/to/boss-zhipin-automation"
-target=".agents/skills/boss-zhipin-automation"
-mkdir -p "$target"
-cp -R "$source_dir/SKILL.md" "$source_dir/README.md" "$source_dir/agents" "$target/"
-```
-
-Codex 也支持符号链接的 Skill 目录。开发期间可以让安装位置链接到本项目，这样修改 `SKILL.md` 后不需要重复安装。
-
-### 安装为管理员级 Skill
-
-管理员级 Skill 适合共享机器或容器环境。Codex 在 Linux 和 macOS 上读取的管理员级位置是：
-
-```text
-/etc/codex/skills/boss-zhipin-automation/
-```
-
-在本项目根目录执行：
-
-```bash
-sudo mkdir -p /etc/codex/skills/boss-zhipin-automation
-sudo cp -R SKILL.md README.md agents /etc/codex/skills/boss-zhipin-automation/
-```
-
-管理员级安装需要相应的系统权限。Windows 的管理员级 Skill 路径未在这份 Codex 文档中列出，因此不要自行假定安装位置。
-
-### 调用与刷新
-
-安装后可以：
-
-- 使用 `/skills` 查看当前可用的 Skill。
-- 使用 `$boss-zhipin-automation` 显式调用。
-- 让 Codex 根据 `description` 在相关任务中隐式调用。
-
-Codex 会自动检测 Skill 变更。如果新安装或修改后的 Skill 没有出现，重启 Codex。
-
-### 启用或禁用
-
-可以在 `~/.codex/config.toml` 中禁用某个本地 Skill，而无需删除文件：
-
-```toml
-[[skills.config]]
-path = "/absolute/path/to/boss-zhipin-automation/SKILL.md"
-enabled = false
-```
-
-修改 `config.toml` 后需要重启 Codex。
-
-### 关于 skill-installer
-
-`$skill-installer` 用于安装 OpenAI 精选 Skill 或其他仓库中的 Skill。本项目是本地 Skill，应通过 `.agents/skills` 安装，不建议执行：
-
-```text
-$skill-installer boss-zhipin-automation
-```
-
-如果需要把本项目分发给其他用户，后续可以将它打包为 plugin。
-
-## 使用边界
-
-本 Skill 只把 `SKILL.md` 中明确列出的控件和操作视为已验证事实。其他页面结构、控件 ID 和交互行为仍然需要通过当前项目的代码、运行结果或 UI 树进行确认。
-
-如果需求涉及未知控件或无法定位的控件，应优先获取当前页面的控件树、Accessibility 信息、Poco UI 树或页面截图，不要把固定坐标作为默认替代方案。
+修改自动化代码时优先做最小改动、复用已有实现和已验证控件，不做与需求无关的重构。
